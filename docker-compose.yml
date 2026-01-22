@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7.2
+    container_name: qgenie-redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 4gb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  xmlparser:
+    build:
+      context: .
+      dockerfile: Dockerfile.xmlparser
+    container_name: qgenie-xmlparser
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_TTL_SECONDS: 43200   # 12 hours
+      XML_API_TIMEOUT: 30
+    restart: on-failure
